@@ -15,6 +15,10 @@ const UserSchema = new mongoose.Schema({
     password: {
         type: String,
         required: [true, 'Please provide a password'],
+    },
+    role: {
+        type: [String, "admin", "user"],
+        required: true,
     }
 }, { timestamps: true});
 
