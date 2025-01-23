@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const isAdmin = require('../middleware/isAdmin');
 
 class AuthController {
     static async register (req, res) {
@@ -21,7 +22,8 @@ class AuthController {
             user = new User ({
                 name,
                 email,
-                password
+                password,
+                role: 'user',
             }),
 
             await user.save();
@@ -94,6 +96,7 @@ class AuthController {
                     return res.Status(201).json({token, user: { id: user.id, name: user.name, email: user.email, message: "Login successful"}})
                 }
             );
+            
         } catch (err) {
             console.error("Login error:", err)
             res.Status(500).json({
