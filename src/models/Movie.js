@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 
+
+
 const MovieSchema = new mongoose.Schema({
     title: {
         type: String,
@@ -30,3 +32,5 @@ const MovieSchema = new mongoose.Schema({
         required: true,
     },
 }, { timestamps: true});
+
+model.exports = mongoose.model('Movie', MovieSchema);
