@@ -2,7 +2,11 @@ const express = require('express');
 const cors = require('cors')
 const session = require('express-session');
 const connectDB = require('./config/db');
-const routes = require('./routes/index')
+
+// Routes
+// const routes = require('./routes/index')
+const adminRoutes = require('./routes/adminRoutes');
+
 const dotenv = require('dotenv');
 
 dotenv.config();
@@ -20,7 +24,7 @@ app.use(
     })
 );
 
-app.use('/', routes);
+app.use('/admin', adminRoutes);
 
 app.use((err, req, res, next) => {
     console.error(err.stack);
