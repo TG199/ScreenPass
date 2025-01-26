@@ -5,6 +5,9 @@ const connectDB = require('./config/db');
 
 // Routes
 // const routes = require('./routes/index')
+const authRoutes = require('./routes/authRoutes');
+const movieRoutes = require('./routes/movieRoutes');
+const reservationRoutes = require('./routes/reservationRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 
 const dotenv = require('dotenv');
@@ -25,6 +28,7 @@ app.use(
 );
 
 app.use('/admin', adminRoutes);
+
 
 app.use((err, req, res, next) => {
     console.error(err.stack);
