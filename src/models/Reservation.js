@@ -12,14 +12,17 @@ const ReservationSchema = new Schema({
         ref: 'Movie',
         required: true
     },
+    showtime: {
+        type: Schema.Types.ObjectId,
+        ref: 'Showtime',
+        required: true
+    },
+
     date: {
         type: Date,
         required: true
     },
-    time: {
-        type: String,
-        required: true
-    },
+    
     status: {
         type: String,
         enum: ['available', 'reserved'],

@@ -12,7 +12,7 @@ const MovieSchema = new mongoose.Schema({
         required: true,
     },
     posterImage: {
-        type: Image,
+        type: String,
         required: true,
     },
     genre: {
@@ -33,4 +33,4 @@ const MovieSchema = new mongoose.Schema({
     },
 }, { timestamps: true});
 
-model.exports = mongoose.model('Movie', MovieSchema);
+module.exports = mongoose.model('Movie', MovieSchema);

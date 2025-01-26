@@ -15,7 +15,7 @@ class AdminController {
         }
     }
     static async getUser(req, res) {
-        const { id } = req.params.id
+        const { id } = req.params;
         try {
             const user = await User.findById(id)
             if(!user) {
@@ -28,7 +28,7 @@ class AdminController {
         }
     }
     static async deleteUser(req, res) {
-        const { id } = req.params.id;
+        const { id } = req.params;
         try {
             const user = await User.findById(id)
             if (!user) {
