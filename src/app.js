@@ -27,6 +27,9 @@ app.use(
     })
 );
 
+app.use('/auth', authRoutes);
+app.use('/api', movieRoutes);
+app.use('/api', reservationRoutes);
 app.use('/admin', adminRoutes);
 
 
