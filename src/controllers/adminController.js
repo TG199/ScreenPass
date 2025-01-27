@@ -2,85 +2,72 @@ const User = require('../models/User');
 const Movie = require('../models/Movie');
 const Reservation = require('../models/Reservation');
 const Showtime = require('../models/Showtime');
+const asyncHandler = require('../utils/AsyncHandler');
+const CustomError = require('../utils/CustomError');
 
 
 class AdminController {
-    static async getAllUsers(req, res) {
-        try {
-            const users = await User.find().select('-password');
-            res.status(200).json(users);
-        } catch (err) {
-            console.error("Error fetching users:", err);
-            res.status(500).json({msg: "Server error", err: err.message});
+    static getAllUsers = asyncHandler(async (req, res) =>  {
+        const users = await User.find().select('-password');
+
+        if (!users.length) {
+            throw new CustomError("No users found", 404);
         }
-    }
-    static async getUser(req, res) {
+
+        res.status(200).json(users);
+    })
+    static getUser = asyncHandler(async (req, res) => {
         const { id } = req.params;
-        try {
-            const user = await User.findById(id)
-            if(!user) {
-                return res.status(404).json({msg: "User not found"});
-            }
-            res.status(200).json(user);
-        } catch (err) {
-            console.error("Error getting user:", err);
-            res.status(500).json({msg: "Server error", err: err.message});   
+
+        const user = await User.findById(id)
+        if(!user) {
+            throw new CustomError("User not found", 404);
         }
-    }
-    static async deleteUser(req, res) {
+
+        res.status(200).json(user);
+    });
+
+    static deleteUser = asyncHandler(async (req, res) => {
         const { id } = req.params;
-        try {
-            const user = await User.findById(id)
-            if (!user) {
-                return res.status(404).json({msg: "User not found"});
-            }
-            await user.remove();
-            res.status(200).json({msg: "User deleted"});
-        } catch (err) {
-            console.error("Error deleting user:", err);
-            res.status(500).json({msg: "Server error", err: err.message});
-        }
-    }
 
-    static async promoteToAdmin(req, res) {
+        const user = await User.findByIdAndDelete(id)
+        if (!user) {
+            throw new CustomError("User not found", 404);
+        }
+        res.status(200).json({message: "User deleted"});
+    });
+
+    static promoteToAdmin = asyncHandler (async (req, res) => {
         const { userId } = req.params;
-        try {
-            const user = await User.findByidAndUpdate(
-            userId, 
-            { role: 'admin' },
-            { new: true});
+        
+        const user = await User.findByidAndUpdate(
+        userId, 
+        { role: 'admin' },
+        { new: true, runValidators: true});
 
-            if (!user) {
-                return res.status(404).json({msg: "User not found"});
-            }
-            user.save();
-            res.status(200).json({msg: "User promoted to admin", user});
-        } catch (err) {
-            console.error("Error promoting user:", err);
-            res.status(500).json({msg: "Server error", err: err.message});
+        if (!user) {
+            throw new CustomError("User not found", 404);
         }
-    }
-    static async demoteToUser(req, res) {
+        res.status(200).json({msg: "User promoted to admin", user});
+        
+    });
+
+    static demoteToUser = asyncHandler (async (req, res) => {
         const { userId } = req.params;
-        try {
-            const user = await User.findByidAndUpdate(
-            userId, 
-            { role: 'user' },
-            { new: true});
+        const user = await User.findByidAndUpdate(
+        userId, 
+        { role: 'user' },
+        { new: true});
 
-            if (!user) {
-                return res.status(404).json({msg: "User not found"});
-            }
-            user.save();
-            res.status(200).json({msg: "User demoted to user", user});
-        } catch (err) {
-            console.error("Error demoting user:", err);
-            res.status(500).json({msg: "Server error", err: err.message});
+        if (!user) {
+            throw new CustomError("User not found", 404);
         }
-    }
+
+        res.status(200).json({msg: "User demoted to user", user});
+    });
 
     // Movie operations
-    static async createMovie(req, res) {
+    static createMovie = asyncHandler (async (req, res) => {
         const { 
         title,
         description,
@@ -90,222 +77,201 @@ class AdminController {
         releaseDate,
         duration
           } = req.body;
-        try {
-            const movie = new Movie({
-                title,
-                description,
-                posterImage,
-                genre,
-                rating,
-                releaseDate,
-                duration
-            });
-            await movie.save();
-            res.status(201).json(movie);
-        } catch (err) {
-            console.error("Error creating movie:", err);
-            res.status(500).json({msg: "Server error", err: err.message});
+
+        if (!title || !description || !posterImage) {
+            throw new CustomError('Please provide all required fields', 400);
         }
-    }
 
-    static async updateMovie(req, res) {
-        const { title, description, posterImage, genre, rating, releaseDate, duration } = req.body;
+        
+        const movie = await Movie.create({
+            title,
+            description,
+            posterImage,
+            genre,
+            rating,
+            releaseDate,
+            duration
+        });
+        res.status(201).json(movie);
+        
+    });
 
-        try {
-            const movie = await Movie.findById(req.params.id);
-            if (!movie) {
-                return res.status(404).json({msg: "Movie not found"});
-            }
-            movie.title = title;
-            movie.description = description;
-            movie.posterImage = posterImage;
-            movie.genre = genre;
-            movie.rating = rating;
-            movie.releaseDate = releaseDate;
-            movie.duration = duration;
-
-            await movie.save();
-            res.status(200).json(movie);
-        } catch (err) {
-            console.error("Error updating movie:", err);
-            res.status(500).json({msg: "Server error", err: err.message});
-        }
-    }
-
-    static async deleteMovie(req, res) {
+    static updateMovie = asyncHandler (async (req, res) => {
         const { id } = req.params;
-        try {
-            const movie = await Movie.findById(id);
-            if (!movie) {
-                return res.status(404).json({msg: "Movie not found"});
-            }
-            await movie.remove();
-        } catch (err) {
-            console.error("Error deleting movie:", err);
-            res.status(500).json({msg: "Server error", err: err.message});
-        }
-    }
+        const updates = req.body;
 
-    static async getAllMovies(req, res) {
-        try {
-            const movies = await Movie.find();
-            res.status(200).json(movies);
-        } catch (err) {
-            console.error("Error fetching movies:", err)
-            res.status(500).json({msg: "Server error", err: err.message});
+        const movie = await Movie.findByIdAndUpdate(
+            id,
+            updates,
+            { new: true, runValidators: true }
+        );
+
+        if (!movie) {
+            throw new CustomError("Movie not found", 404);
         }
-    }
+        
+        res.status(200).json(movie);
+    });
+
+    static deleteMovie = asyncHandler (async (req, res) => {
+        const { id } = req.params;
+
+        const movie = await Movie.findByIdAndDelete(id);
+        if (!movie) {
+                throw new CustomError("Movie not found", 404);
+        }
+        
+        res.status(200).json({message: "Movie deleted successfully"});
+    });
+
+    static getAllMovies = asyncHandler (async (req, res) => {
+
+        const movies = await Movie.find();
+
+        if (!movies.length) {
+            throw new CustomError("No movies found", 404);
+        }
+        res.status(200).json(movies);
+
+    });
 
 
     // Showtime operations
-    static async createShowtime(req, res) {
-        const { movie, date, time, availableSeats } = req.body;
-        try {
-            const movie_ = await Movie.findById(movie);
-            if (!movie_) {
-                return res.status(404).json({msg: "Movie not found"});
-            }
-            const showtime = new Showtime({
-                movie,
-                date,
-                time,
-                availableSeats
-            });
-            await showtime.save();
-            res.status(201).json(showtime);
-        } catch (err) {
-            console.error("Error creating showtime:", err);
-            res.status(500).json({msg: "Server error", err: err.message});
+    static createShowtime = asyncHandler(async (req, res) => {
+        const { movie, date, time, availableSeats, theater, price } = req.body;
+        
+        const movieExists = await Movie.findById(movie);
+        if (!movieExists) {
+            throw CustomError("Movie not found", 404);
         }
-    }
+        const showtime = await Showtime.create({
+            movie,
+            date,
+            time,
+            availableSeats,
+            theater,
+            price
+        });
 
+        res.status(201).json(showtime);
+       
+    });
 
-    static async updateShowtime(req, res) {
-        const { movie, date, time, availableSeats } = req.body;
-        if (!movie || !date || !time || !availableSeats) {
-            return res.status(400).json({msg: "All fields are required"});
+    static updateShowtime = asyncHandler(async (req, res) => {
+        const { id } = req.params;
+        const updates = req.body;
+        
+        const showtime = await Showtime.findByIdAndUpdate(
+            id,
+            updates,
+            { new: true, runValidators: true }
+        );
+
+        if (!showtime) {
+            throw new CustomError("Showtime not found", 404);
         }
 
-        try {
-            const showtime = await Showtime.findById(req.params.id);
-            if (!showtime) {
-                return res.status(404).json({msg: "Showtime not found"});
-            }
-            showtime.movie = movie;
-            showtime.date = date;
-            showtime.time = time;
-            showtime.availableSeats = availableSeats;
+        res.status(200).json(showtime)
 
-            await showtime.save();
-            res.status(200).json(showtime);
-        } catch (err) {
-            console.error("Error updating showtime:", err);
-            res.status(500).json({msg: "Server error", err: err.message});
-        }
-    }
+    });
 
-    static async deleteShowtime(req, res) {
-        const { movie } = req.body;
-        try {
-            const showtime = await Showtime.findById(movie);
-            if (!showtime) {
-                return res.status(404).json({msg: "Showtime not found"});
-            }
-            await showtime.remove();
-            res.status(200).json({msg: "Showtime deleted"});
-        } catch (err) {
-            console.error("Error deleting showtime:", err);
-            res.status(500).json({msg: "Server error", err: err.message});
-        }
-    }
+    static deleteShowtime = asyncHandler(async (req, res) => {
+        const { id } = req.params
 
-    static async getAllShowtimes(req, res) {
-        try {
-            const showtimes = await Showtime.find();
-            res.status(200).json(showtimes);
-        } catch (err) {
-            console.error("Error fetching showtimes:", err);
-            res.status(500).json({msg: "Server error", err: err.message});
-        }
-    }
+        const showtime = await Showtime.findByIdAndDelete(id)
 
-    static async getShowtime(req, res) {
-        const { movie } = req.body;
-        try {
-            const showtime = await Showtime.findById(movie);
-            if (!showtime) {
-                return res.status(404).json({msg: "Showtime not found"});
-            }
-            res.status(200).json(showtime);
-        } catch (err) {
-            console.error("Error getting showtime:", err);
-            res.status(500).json({msg: "Server error", err: err.message});
+        if (!showtime) {
+            throw new CustomError("Showtime not found", 404);
         }
-    }
+      
+        res.status(200).json({message: "Showtime deleted"});
+        
+    });
+
+    static getAllShowtimes = asyncHandler(async (req, res) => {
+
+        
+        const showtimes = await Showtime.find().populate("movie", "title");
+
+        if (!showtimes.length) {
+            throw new CustomError("No Showtime Available", 404);
+        }
+        res.status(200).json(showtimes)
+    });
+
+    static getShowtime = asyncHandler(async (req, res) => {
+        const { movie } = req.params;
+        
+        const movieExists = await Movie.findById(movie);
+        if (!movieExists) {
+            throw new CustomError("Movie not found, can't display showtime of non-existant movie", 404);
+        }
+        const showtime = await Showtime.findOne(movie);
+
+        res.status(200).json(showtime.time);
+    });
+
     // Reservation operations}
-    static async getReservation(req, res) {
-        const { movie } = req.body;
-        try {
-            const reservation = await Reservation.findById(movie);
-            if (!reservation) {
-                return res.status(404).json({msg: "Reservation not found"});
-            }
-            res.status(200).json(reservation);
-        } catch (err) {
-            console.error("Error getting reservation:", err);
-            res.status(500).json({msg: "Server error", err: err.message});
-        }  
-    }
+    static getAllReservations = asyncHandler(async (req, res) => {
+        const reservations = await Reservation.find()
+            .populate('user', 'name email')
+            .populate('movie', 'title')
+            .populate('showtime', 'date time');
 
-    static async deleteReservation(req, res) {
-        const { movie } = req.body;
-        try {
-            const reservation = await Reservation.findById(movie);
-            if (!reservation) {
-                return res.status(404).json({msg: "Reservation not found"});
-            }
-            await reservation.remove();
-            res.status(200).json({msg: "Reservation deleted"});
-        } catch (err) {
-            console.error("Error deleting reservation:", err);
-            res.status(500).json({msg: "Server error", err: err.message});
+        if (!reservations.length) {
+            throw new CustomError('Reservation not found', 404)
         }
-    }
+        res.status(200).json(reservations);
+    });
 
-    static async updateReservation(req, res) {
-        const { movie, user, showtime, date, status } = req.body;
-        if (!movie || !user || !showtime || !date || !status) {
-            return res.status(400).json({msg: "All fields are required"});
+    static getReservation = asyncHandler (async (req, res) => {
+        const { id } = req.params;
+        
+        const reservation = await Reservation.findById(id)
+        .populate('user', 'name email')
+        .populate('movie', 'title')
+        .populate('showtime', 'date time');
+
+
+        if (!reservation) {
+                throw new CustomError("Reservation not found", 404);
+        }
+        res.status(200).json(reservation); 
+    });
+
+    static updateReservation = asyncHandler(async (req, res) => {
+        const { id } = req.params;
+        const updates = req.body;
+
+
+        const reservation = await Reservation.findByIdAndUpdate(
+            id,
+            updates,
+            { new: true, runValidators: true}
+        )
+            .populate('user', 'name email')
+            .populate('movie', 'title')
+            .populate('showtime', 'date time');
+
+        if (!reservation) {
+            throw new CustomError("Reservation not found", 404);
         }
 
-        try {
-            const reservation = await Reservation.findById(req.params.id);
-            if (!reservation) {
-                return res.status(404).json({msg: "Reservation not found"});
-            }
-            reservation.movie = movie;
-            reservation.user = user;
-            reservation.showtime = showtime;
-            reservation.date = date;
-            reservation.status = status;
+        res.status(200).json(reservation);
+    });
 
-            await reservation.save();
-            res.status(200).json(reservation);
-        } catch (err) {
-            console.error("Error updating reservation:", err);
-            res.status(500).json({msg: "Server error", err: err.message});
+
+    static deleteReservation = asyncHandler(async (req, res) => {
+
+        const { id } = req.params
+        const reservation = await Reservation.findByIdAndDelete(id);
+        if (!reservation) {
+            throw new CustomError("Reservation not found", 404);
         }
-    }
-    static async getAllReservations(req, res) {
-        try {
-            const reservations = await Reservation.find();
-            res.status(200).json(reservations);
-        } catch (err) {
-            console.error("Error fetching reservations:", err);
-            res.status(500).json({msg: "Server error", err: err.message});
-        }
-    }
+        res.status(200).json({msg: "Reservation deleted"});
+    });
 
 }
+
 
 module.exports = AdminController;
