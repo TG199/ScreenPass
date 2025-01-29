@@ -10,11 +10,17 @@ class UserController {
 
     static reserveSit = asyncHandler(async (req, res) => {
         const { id, showtimeId, movieId } = req.params
-        
+
         const user = await User.findById(id);
 
         if (!user) {
             throw new CustomError("User not found", 400);
+        }
+
+        const { seatNumber } = req.body;
+
+        if (!seatNumber) {
+            throw new CustomError("Seat number is required", 400);
         }
 
         const movieExists = await Movie.findById(movieId)
@@ -25,28 +31,29 @@ class UserController {
         }
         const movieShowtime = await Showtime.findOne({_id: showtimeId,
             movie: movieId
-        }) 
+        })
 
         if (!movieShowtime){
             throw new CustomError("No showtime allocated for movie", 404);
         }
 
-        if (movieShowtime.availableSeats === 0 ) {
-            throw new CustomError("Seats are fully booked", 400);
+        const seat = movieShowtime.availableSeats.find(seat => seat.seatNumber === seatNumber)
+
+        if (!seat) {
+            throw new CustomError("Seat is not available, try another one", 400);
         }
+        seat.isReserved = true;
 
-        await Showtime.updateOne(
-            { _id: showtimeId },
-            { $inc: { availableSeats: -1}}
-        );
-            const status = "reserved"
+        await movieShowtime.save();
 
+        const status = "reserved";
         const reservation = new Reservation({
             "user": user._id,
             "movie": movieExists._id,
             "showtime": movieShowtime._id,
             "status": status,
-            "date": movieShowtime.date
+            "date": movieShowtime.date,
+            "seatNumber": seatNumber
         })
 
         await reservation.save()
@@ -56,8 +63,36 @@ class UserController {
         
     });
 
-    static showAvailableShowtime(req, res) {
-       
-    }
+    static getMoviesAndShowtime = asyncHandler(async (req, res) => {
+    
+    });
+
+    static availableSeats = asyncHandler(async (req, res) => {
+        const { showtimeId } = req.params
+
+        const matchingShowtime = await Showtime.findById(showtimeId);
+
+        if (!matchingShowtime) {
+            throw new CustomError("No matching showtime to find available seats", 404)
+        }
+
+        let available = [];
+
+        for (let i = 0; i < matchingShowtime.availableSeats.length; i++) {
+            if (i.isReservered === false)
+            {
+                available.push(i.seatNumber);
+            }
+        }
+        if (available.length === 0) {
+            throw new CustomError("There are no available seats at this time");
+        }
+
+        res.status(200).json({availableSeats: available});
+    });
+
+    static viewOrCancel = asyncHandler(async (req, res) => {
+
+    })
 
 }
