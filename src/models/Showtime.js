@@ -24,10 +24,12 @@ const ShowtimeSchema = new Schema({
         type: Number,
         required: true
     },
-    availableSeats: {
-        type: Number,
-        required: true
-    }
+    availableSeats: [
+        {
+            seatNumber: String,
+            isReserved: Boolean
+        }
+    ]
 }, { timestamps: true });
 
 module.exports = mongoose.model('Showtime', ShowtimeSchema);
