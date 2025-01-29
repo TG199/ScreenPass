@@ -1,40 +1,63 @@
 const User = require('../models/User')
 const Reservation = require('../models/Reservation')
+const Movie = require('../models/Movie')
+const Showtime = require('../models/Showtime');
+const asyncHandler = require('../utils/AsyncHandler');
+const CustomError = require('../utils/CustomError');
+
 
 class UserController {
 
-    static async reserveSit(req, res) {
-        const { id } = req.body.id
+    static reserveSit = asyncHandler(async (req, res) => {
+        const { id, showtimeId, movieId } = req.params
+        
+        const user = await User.findById(id);
 
-        try {
-            const user = User.findOne(id)
-
-            if (!user) {
-                console.error("User not found")
-                res.status(500).json({msg: "Invalid user"})
-            }
-
-            await u
-        } catch (error) {
-            console.error(error)
-            res.status(500).json({msg: "Server error"})
+        if (!user) {
+            throw new CustomError("User not found", 400);
         }
-    }
 
-    static showAvailableSits(req, res) {
-        try {
-            const availableSits = Reservation.find({status: "available"})
+        const movieExists = await Movie.findById(movieId)
 
-            if (!availableSits) {
-                console.error("No available sits")
-                res.status(500).json({msg: "No available sits"})
-            }
-
-            res.status(200).json(availableSits)
-        } catch (error) {
-            console.error(error)
-            res.status(500).json({msg: "Server error"})
+        if (!movieExists)
+        {
+            throw new CustomError("Can't reserve sit, selected movie is not availble", 404)
         }
+        const movieShowtime = await Showtime.findOne({_id: showtimeId,
+            movie: movieId
+        }) 
+
+        if (!movieShowtime){
+            throw new CustomError("No showtime allocated for movie", 404);
+        }
+
+        if (movieShowtime.availableSeats === 0 ) {
+            throw new CustomError("Seats are fully booked", 400);
+        }
+
+        await Showtime.updateOne(
+            { _id: showtimeId },
+            { $inc: { availableSeats: -1}}
+        );
+            const status = "reserved"
+
+        const reservation = new Reservation({
+            "user": user._id,
+            "movie": movieExists._id,
+            "showtime": movieShowtime._id,
+            "status": status,
+            "date": movieShowtime.date
+        })
+
+        await reservation.save()
+        res.status(200).json(reservation)
+
+
+        
+    });
+
+    static showAvailableShowtime(req, res) {
+       
     }
 
 }
