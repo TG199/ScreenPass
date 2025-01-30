@@ -4,6 +4,7 @@ const Movie = require('../models/Movie')
 const Showtime = require('../models/Showtime');
 const asyncHandler = require('../utils/AsyncHandler');
 const CustomError = require('../utils/CustomError');
+//const isAuthenticated = require('../middleware/isAuthenticated')
 
 
 class UserController {
@@ -64,6 +65,13 @@ class UserController {
     });
 
     static getMoviesAndShowtime = asyncHandler(async (req, res) => {
+        const movies = await Movie.find().populate("showtimes");
+
+        if (!movies.length) {
+            throw new CustomError("No movies found", 404);
+        }
+
+        res.status(200).json(movies);
     
     });
 
@@ -90,11 +98,81 @@ class UserController {
             throw new CustomError("There are no available seats at this time");
         }
 
-        res.status(200).json({availableSeats: available});
+        res.status(200).json({availableSeats: available.map(seat => seat.seatNumber)});
     });
 
-    static viewOrCancel = asyncHandler(async (req, res) => {
+    static viewReservation = asyncHandler(async (req, res) => {
+        const { userId, reservationId }  = req.params
 
+        const user = req.user.id;
+        if (user != userId) {
+            throw new CustomError("Unathorized, user is not authorized", 403);
+        }
+        const userReservation = await User.findById(userId, {
+            "reservations": {$elemMatch: { _id: reservationId}}
+        });
+
+        if (!userReservation) {
+            throw new CustomError("No reservation found for this user", 404);
+        }
+
+        res.status(200).json({
+            reservation: userReservation
+        });
+    });
+
+    static cancelReservation = asyncHandler(async (req, res) => {
+        const { userId, reservationId} = req.params;
+
+        const user = req.user.id;
+
+        if (user != userId) {
+            throw new CustomError("Unathorized, user is not authorized", 403);
+        }
+
+         
+        const reservation = await User.findOne(
+            {_id: userId},
+            {reservations: {$elemMatch: { _id: reservationId}}
+        }).populate({
+            path:  "reservations.showtime",
+            select: "availableSeats date"
+        })
+
+        if (!reservation || ! reservation.reservations.length) {
+            throw new CustomError("No reservation found", 404);
+        }
+        const currentReservation = reservation.reservations[0];
+        const  showtime = currentReservation.showtime;
+
+        const upcoming = new Date(currentReservation.date) > new Date();
+
+        if (!upcoming) {
+            throw new CustomError("You can't cancel reservation for past showtime", 400);
+        }
+
+        await Reservation.findByIdAndDelete(reservationId);
+
+        const seat = showtime.availableSeats.find(seat => seat.seatNumber === currentReservation.seatNumber);
+
+        if (seat) {
+            seat.isReserved = false;
+
+            await showtime.save();
+        } else {
+            throw new CustomError("Seat not found in Showtime available seats", 404);
+        }
+
+        res.status(200).json({
+            message: "Reservation canceled",
+            canceledReservation: {
+                reservationId,
+                movie: currentReservation.movie,
+                showtime: currentReservation.showtime,
+                seatNumber: currentReservation.seatNumber,
+                date: currentReservation.date
+            }
+        });
     })
 
 }
