@@ -70,20 +70,22 @@ class UserController {
     static availableSeats = asyncHandler(async (req, res) => {
         const { showtimeId } = req.params
 
-        const matchingShowtime = await Showtime.findById(showtimeId);
+        const user = req.user
+
+        if (!user) {
+            throw new CustomError("Unathorized", 401);
+        }
+
+        const matchingShowtime = await Showtime.findById(showtimeId, {
+            "availableSeats": {$elemMatch: { isReserved: false} }
+        });
 
         if (!matchingShowtime) {
-            throw new CustomError("No matching showtime to find available seats", 404)
+            throw new CustomError("No matching showtime found", 404)
         }
 
-        let available = [];
+        const  available = matchingShowtime.availableSeats.filter(seat => seat.isReserved === false);
 
-        for (let i = 0; i < matchingShowtime.availableSeats.length; i++) {
-            if (i.isReservered === false)
-            {
-                available.push(i.seatNumber);
-            }
-        }
         if (available.length === 0) {
             throw new CustomError("There are no available seats at this time");
         }
