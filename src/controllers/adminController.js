@@ -50,6 +50,9 @@ class AdminController {
     static createShowtime = asyncHandler(async (req, res) => {
         const { movie, date, time, availableSeats, theater, price } = req.body;
         if (!await Movie.findById(movie)) throw new CustomError("Movie not found", 404);
+
+        const conflict = await Showtime.findOne({ movie, date, time, theater });
+        if (conflict) throw new CustomError("Showtime conflict! Another movie is scheduled at the same time and theater", 400);
         const showtime = await Showtime.create({ movie, date, time, availableSeats, theater, price });
         res.status(201).json(showtime);
     });
