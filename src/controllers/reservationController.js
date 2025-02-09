@@ -91,7 +91,16 @@ class ReservationController{
         totalReservations: reservations.length,
         totalRevenue,
        });
+    });
 
+    static getTopMovies = asyncHandler(async (req, res) => {
+        const topMovies = await Reservation.aggregate([
+            { $group: { _id: "$movie", count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 5 }
+        ]).populate('movie', 'title');
+
+        rs.status(200).json(topMovies);
     });
 }
 
