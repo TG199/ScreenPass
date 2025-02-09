@@ -37,7 +37,7 @@ class ReservationController{
 
         res.status(201).json(reservation);
     });
-    
+
     static getReservation = asyncHandler(async (req, res) => {
         const { id } = req.params;
         const reservation = await Reservation.findById(id)
@@ -63,6 +63,35 @@ class ReservationController{
         const reservation = await Reservation.findByIdAndDelete(id);
         if (!reservation) throw new CustomError("Reservation not found", 404);
         res.status(200).json({ msg: "Reservation deleted" });
+    });
+
+    static getReservationsReport = asyncHandler(async (req, res) => {
+        const { period } = req.query;
+
+        let startDate;
+        if (period === 'daily') {
+            startDate = new Date();;
+            startDate.setHours(0, 0, 0, 0);
+        } else if (period === 'weekly') {
+            startDate = new Date();
+            startDate.setDate(startDate.getDate() - startDate.getDay());
+        } else if (period === 'monthly') {
+            startDate = new Date();
+            startDate.setMonth(startDate.getMonth() -1);
+        }
+
+        const reservations = await Reservation.find({
+            createdAt: { $gte: startDate }
+        }).populate('movie', 'title')
+        .populate('showtime', 'date time');
+
+       const totalRevenue = reservations.reduce((sum, res) => sum + res.showtime.price, 0);
+       res.status(200).json({
+        period,
+        totalReservations: reservations.length,
+        totalRevenue,
+       });
+
     });
 }
 
