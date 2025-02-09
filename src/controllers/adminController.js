@@ -81,6 +81,29 @@ class AdminController {
         if (!showtimes.length) throw new CustomError("No showtimes available", 404);
         res.status(200).json(showtimes);
     });
+
+    static getReservationsReport = asyncHandler(async( req, res) => {
+        const reservations = await Reservation.find()
+            .populate('user', 'name', 'email')
+            .popilate('movie', 'title')
+            .populate('showtime', 'date time theater price');;
+
+        if (!reservations.length){
+            throw new CustomError("No reservations found, 404");
+        }
+
+        const totalRevenue = reservations.reduce((sum, res) => sum + res.showtime.price, 0);
+        const totalReservations = reservations.length;
+        const theaters = await Showtime.find().distinct('theater');
+
+        res.status(200).json({
+            totalReservations,
+            totalRevenue,
+            theaters,
+            reservations
+        });
+
+    });
 }
 
 module.exports = AdminController;
