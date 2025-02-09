@@ -13,6 +13,31 @@ class ReservationController{
         res.status(200).json(reservations);
     });
 
+    static createReservation = asyncHandler(async (req, res) => {
+        const { user, showtime, seats } = req.body;
+
+        const showtimeDetails = await showtime.findById(showtime);
+        if (!showtimeDetails) {
+            throw new CustomError("Showtime not found", 404);
+        }
+
+        const totalSeats = showtimeDetails.availableSeats - showtimeDetails.reservedSeats.length;
+        if (totalSeats < seats.length) {
+            throw new CustomError("Not enough seats available", 404);
+        }
+
+        showtimeDetails.reservedSeats.push(...seats);
+        await showtimeDetails.save();
+
+        const reservation = await Reservation.create({
+            user,
+            showtime, 
+            seats 
+        });
+
+        res.status(201).json(reservation);
+    });
+    
     static getReservation = asyncHandler(async (req, res) => {
         const { id } = req.params;
         const reservation = await Reservation.findById(id)

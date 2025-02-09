@@ -86,7 +86,7 @@ class AdminController {
         const reservations = await Reservation.find()
             .populate('user', 'name', 'email')
             .popilate('movie', 'title')
-            .populate('showtime', 'date time theater price');;
+            .populate('showtime', 'date time theater price');
 
         if (!reservations.length){
             throw new CustomError("No reservations found, 404");

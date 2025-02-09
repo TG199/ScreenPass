@@ -29,6 +29,11 @@ const ShowtimeSchema = new Schema({
             seatNumber: String,
             isReserved: Boolean
         }
+    ],
+    reservedSeats: [
+        {
+            type: Number
+        }
     ]
 }, { timestamps: true });
 
